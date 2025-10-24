@@ -3,8 +3,7 @@ import face_recognition
 import numpy as np
 import os
 from datetime import datetime
-import asyncio
-import subprocess
+import pyttsx3
 
 # --- Paths ---
 KNOWN_FACES_DIR = "known_faces"
@@ -12,9 +11,17 @@ EMBEDDINGS_DIR = "known_embeddings"
 os.makedirs(KNOWN_FACES_DIR, exist_ok=True)
 os.makedirs(EMBEDDINGS_DIR, exist_ok=True)
 
-# --- Async Text-to-Speech ---
-async def speak(text):
-    await asyncio.to_thread(subprocess.run, ["espeak", "-ven+m3", "-s140", text])
+# --- Text-to-Speech ---
+tts_engine = pyttsx3.init()
+tts_engine.setProperty('rate', 140)  # Speed
+tts_engine.setProperty('voice', 'english')  # Default voice
+
+def speak(text):
+    try:
+        tts_engine.say(text)
+        tts_engine.runAndWait()
+    except Exception as e:
+        print(f"TTS error: {e}")
 
 # --- Load known faces ---
 def load_known_faces():
@@ -29,16 +36,16 @@ def load_known_faces():
     return known_encodings, known_names
 
 # --- Show preview with catimg ---
-async def show_face_preview(face_img):
+def show_face_preview(face_img):
     temp_file = "tmp_preview.jpg"
     preview = cv2.resize(face_img, (50,50))
     cv2.imwrite(temp_file, preview)
-    await asyncio.to_thread(subprocess.run, ["catimg", temp_file])
+    os.system(f"catimg {temp_file}")
     os.remove(temp_file)
 
 # --- Save new face ---
-async def maybe_save_face(face_img, encoding):
-    await show_face_preview(face_img)
+def maybe_save_face(face_img, encoding):
+    show_face_preview(face_img)
     ans = input("Save this face? (yes/no): ").strip().lower()
     if ans != "yes":
         print("Skipped saving face.")
@@ -55,11 +62,11 @@ async def maybe_save_face(face_img, encoding):
     cv2.imwrite(face_file, face_img)
     np.save(npy_file, encoding)
     print(f"Saved new face: {name}")
-    await speak(f"Saved new face at {timestamp}")
+    speak(f"Saved new face at {timestamp}")
     return encoding, name
 
-# --- Main async function ---
-async def main():
+# --- Main loop ---
+def main():
     known_encodings, known_names = load_known_faces()
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -69,7 +76,6 @@ async def main():
 
     try:
         while True:
-            # Grab a frame only when we detect faces
             ret, frame = cap.read()
             if not ret:
                 continue
@@ -89,14 +95,11 @@ async def main():
                     if matches[best_match_idx]:
                         name = known_names[best_match_idx]
 
-                # Print and async speak after 0.5s
                 print(f"Detected: {name}")
-                await asyncio.sleep(0.5)
-                await speak(f"Detected {name}")
+                speak(f"Detected {name}")
 
-                # Save unknown faces
                 if name == "Unknown":
-                    emb, n = await maybe_save_face(face_img, encoding)
+                    emb, n = maybe_save_face(face_img, encoding)
                     if emb is not None:
                         known_encodings.append(emb)
                         known_names.append(n)
@@ -106,6 +109,6 @@ async def main():
     finally:
         cap.release()
 
-# --- Run async main ---
-asyncio.run(main())
+if __name__ == "__main__":
+    main()
 

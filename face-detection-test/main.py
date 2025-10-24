@@ -3,7 +3,6 @@ import numpy as np
 import os
 import time
 from datetime import datetime
-import pyttsx3
 import subprocess
 
 # --- Paths ---
@@ -14,18 +13,15 @@ os.makedirs(EMBEDDINGS_DIR, exist_ok=True)
 
 # --- Load models ---
 face_net = cv2.dnn.readNetFromCaffe("deploy.prototxt", "res10_300x300_ssd_iter_140000.caffemodel")
-embedding_model = cv2.dnn.readNetFromTorch("nn4.small2.v1.t7")
+embedding_model = cv2.dnn.readNetFromTorch("nn4.v2.t7")
 
-# --- Recognition settings ---
-THRESHOLD = 0.6
+# --- config ---
+THRESHOLD = 0.65
 
-# --- Text-to-Speech setup ---
-tts_engine = pyttsx3.init(driverName='espeak')
+# --- Text-to-Speech ---
 def speak(text):
     try:
         subprocess.run(["espeak", "-ven+m3", "-s140", text])
-#        tts_engine.say(text)
-#        tts_engine.runAndWait()
     except Exception as e:
         print(f"Speech error: {e}")
 
@@ -44,21 +40,39 @@ def load_known_faces():
 # --- Compute face embedding ---
 def get_face_embedding(face_img):
     face_blob = cv2.dnn.blobFromImage(face_img, 1.0/255, (96,96), (0,0,0), swapRB=True, crop=True)
-
     embedding_model.setInput(face_blob)
     vec = embedding_model.forward()
     return vec.flatten()
 
-# --- Save new face with timestamp ---
-def save_new_face(face_img, embedding):
-    name_to_input = input("Enter a name for this person")
+# --- Show preview with catimg ---
+def show_face_preview(face_img, no_of_pixels=50):
+    temp_file = "tmp_preview.jpg"
+    preview = cv2.resize(face_img, (no_of_pixels,no_of_pixels))
+    cv2.imwrite(temp_file, preview)
+    subprocess.run(["catimg", temp_file])
+    os.remove(temp_file)
+
+# --- Save new face ---
+def maybe_save_face(face_img, embedding):
+    show_face_preview(face_img)
+    ans = input("Save this face? (yes/no): ").strip().lower()
+    if ans != "yes":
+        print("Skipped saving face.")
+        return None, None
+
+    name = input("Enter a name for this person: ").strip()
+    if not name:
+        print("No name entered, skipping.")
+        return None, None
+
     timestamp = datetime.now().strftime("%Y_%m_%d.%H_%M_%S")
-    face_file = os.path.join(KNOWN_FACES_DIR, f"{name_to_input}.jpg")
-    npy_file = os.path.join(EMBEDDINGS_DIR, f"{name_to_input}.npy")
+    face_file = os.path.join(KNOWN_FACES_DIR, f"{name}.jpg")
+    npy_file = os.path.join(EMBEDDINGS_DIR, f"{name}.npy")
     cv2.imwrite(face_file, face_img)
     np.save(npy_file, embedding)
-    print(f"Saved new face: {name_to_input}")
-#    speak(f"Saved new face at {timestamp}")
+    print(f"Saved new face: {name}")
+    speak(f"Saved new face at {timestamp}")
+    return embedding, name
 
 # --- Main loop ---
 known_encodings, known_names = load_known_faces()
@@ -68,7 +82,6 @@ if not cap.isOpened():
     raise RuntimeError("Camera not found.")
 
 print("Face recognition started. Press Ctrl+C to stop.")
-
 try:
     while True:
         ret, frame = cap.read()
@@ -82,7 +95,7 @@ try:
 
         for i in range(detections.shape[2]):
             confidence = detections[0,0,i,2]
-            if confidence < 0.5:
+            if confidence < THRESHOLD:
                 continue
 
             box = (detections[0,0,i,3:7] * np.array([w,h,w,h])).astype(int)
@@ -102,16 +115,15 @@ try:
                     name = known_names[best_idx]
 
             print(f"Detected: {name}, confidence: {confidence:.2f}")
-#            speak(f"Detected {name}")
-            # Save unknown faces automatically
+            speak(f"Detected {name}")
+
             if name == "Unknown":
-                save_new_face(face_img, embedding)
-                known_encodings.append(embedding)
-                known_names.append(datetime.now().strftime(name_to_input))
+                emb, n = maybe_save_face(face_img, embedding)
+                if emb is not None:
+                    known_encodings.append(emb)
+                    known_names.append(n)
 
 except KeyboardInterrupt:
     print("\nStopping face recognition.")
 finally:
     cap.release()
-
-
