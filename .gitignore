@@ -1,1 +1,4 @@
  
+face-detection-test/*.h5
+face-detection-test/*.onnx
+face-detection-test/*.t7
