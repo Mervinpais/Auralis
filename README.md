@@ -61,6 +61,19 @@ Detected faces, objects, or text will be announced through the speaker.
 
 Adjust settings in config.py for language, detection sensitivity, or audio volume.
 
+
+## Download links to models and such
+
+| Model file | Download link |
+|------------|--------------|
+| retinaface.h5 | [GitHub release – retinaface.h5](https://github.com/serengil/deepface_models/releases/download/v1.0/retinaface.h5) |
+| deploy.prototxt | [OpenCV sample deploy.prototxt](https://github.com/opencv/opencv/raw/3.4.0/samples/dnn/face_detector/deploy.prototxt) |
+| res10_300x300_ssd_iter_140000.caffemodel | [OpenCV sample weights file](https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel) |
+| nn4.v2.t7 | [Main site for Downloads of models](https://cmusatyalab.github.io/openface/models-and-accuracies/)
+| en_US-amy-medium.onnx | [en_US-amy-medium.onnx](https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/en_US-amy-medium.onnx) |
+| en_US-amy-medium.onnx.json | [en_US-amy-medium.onnx.json](https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/en_US-amy-medium.onnx.json) |
+
+
 ## Contributing
 
 Contributions are welcome! You can help with:
