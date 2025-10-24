@@ -75,7 +75,11 @@ Extending multi-language support
 
 ## License
 
-MIT License. See LICENSE for details.
+GPL License. See LICENSE for details.
+
+## Special Thanks to the following;
+
+- YOLO library and models
 
 ## Contact
 
